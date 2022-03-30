@@ -1,0 +1,77 @@
+﻿@page "/tacos"
+
+@using EfCorePaging.Shared.PagerModels
+@using EfCorePaging.Shared.ToppingInfoModels
+@using SomeTaco.Models
+@using SomeTaco.Models.Lookups
+
+<h3>TacoMe</h3>
+
+<Pager PagerInfo=_toppingResponse.PagerInfo
+       OnPageChanged=HandlePageChanged 
+       OnPageSizeChanged=HandlePageSizeChanged />
+
+@if (_loading || ToppingList is null) {
+  <div class="spinner">Loading...</div>
+} else if (!ToppingList.Any()) {
+  <p>No Toppings found</p>
+} else {
+  <ol>
+    @foreach (var topping in ToppingList) {
+      <li>@topping.Name</li>
+    }
+  </ol>
+}
+
+@code {
+  [Inject] private ITacoService TacoService { get; set; } = default!;
+
+  private ToppingType _selectedTopping;
+
+  private ToppingInfo _toppingResponse = new();
+  private List<Topping>? ToppingList => _toppingResponse.CurrentToppingsList;
+
+  private bool _loading;
+
+  protected override async Task OnInitializedAsync() {
+    await GetToppingsList();
+  }
+
+  private async Task HandlePageChanged(int newPage) {
+    switch (newPage) {
+      case (int)PageDirection.First:
+        _toppingResponse.PagerInfo.PageNum = 1;
+        break;
+
+      case (int)PageDirection.Previous:
+        _toppingResponse.PagerInfo.PageNum--;
+        break;
+
+      case (int)PageDirection.Next:
+        _toppingResponse.PagerInfo.PageNum++;
+        break;
+
+      case (int)PageDirection.Last:
+        _toppingResponse.PagerInfo.PageNum = _toppingResponse.PagerInfo.TotalPageCount;
+        break;
+
+      default:
+        _toppingResponse.PagerInfo.PageNum = newPage;
+        break;
+    }
+
+    await GetToppingsList();
+  }
+
+  private async Task HandlePageSizeChanged(int newPageSize) {
+    _toppingResponse.PagerInfo.PageSize = newPageSize;
+    await GetToppingsList();
+  }
+
+  private async Task GetToppingsList() {
+    _loading = true;
+    await InvokeAsync(StateHasChanged);
+    _toppingResponse = await TacoService.GetToppings(_toppingResponse.PagerInfo);
+    _loading = false;
+  }
+}

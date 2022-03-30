@@ -1,0 +1,53 @@
+﻿@using EfCorePaging.Shared.PagerModels
+
+<div class="pager-wrapper">
+  <div class="nav-buttons">
+    <button type="button" disabled="@(PagerInfo.PageNum <= 1)" @onclick="_ => HandlePageButtonClicked(PageDirection.First)">First</button>
+    <button type="button" disabled="@(PagerInfo.PageNum <= 1)" @onclick="_ => HandlePageButtonClicked(PageDirection.Previous)">Previous</button>
+    <button type="button" disabled="@(PagerInfo.PageNum >= PagerInfo.TotalPageCount)" @onclick="_ => HandlePageButtonClicked(PageDirection.Next)">Next</button>
+    <button type="button" disabled="@(PagerInfo.PageNum >= PagerInfo.TotalPageCount)" @onclick="_ => HandlePageButtonClicked(PageDirection.Last)">Last</button>
+  </div>
+  <div class="page-select">
+    <label>Page: </label>
+    <select @onchange=HandlePageChanged>
+      @foreach (var curPage in Enumerable.Range(1, PagerInfo.TotalPageCount)) {
+        <option selected="@(PagerInfo.PageNum == curPage)" value="@curPage">@curPage</option>
+      }
+    </select>
+  </div>
+  <div class="page-size-select">
+    <label>Page Size: </label>
+    <select @onchange=HandlePageSizeChanged>
+      <option selected="@(PagerInfo.PageSize == 10)" value="10">10</option>
+      <option selected="@(PagerInfo.PageSize == 12)" value="12">12</option>
+      <option selected="@(PagerInfo.PageSize == 15)" value="15">15</option>
+      <option selected="@(PagerInfo.PageSize == 20)" value="20">20</option>
+    </select>
+  </div>
+</div>
+
+@code {
+  [Parameter] public PagerInfo PagerInfo { get; set; } = default!;
+  [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+  [Parameter] public EventCallback<int> OnPageSizeChanged { get; set; }
+
+  private async Task HandlePageButtonClicked(PageDirection dir) {
+    if (OnPageChanged.HasDelegate) {
+      await OnPageChanged.InvokeAsync((int)dir);
+    }
+  }
+
+  private async Task HandlePageChanged(ChangeEventArgs e) {
+    if (string.IsNullOrWhiteSpace(e.Value?.ToString()) || !int.TryParse(e.Value.ToString(), out var page)) { return; }
+    if (OnPageChanged.HasDelegate) {
+      await OnPageChanged.InvokeAsync(page);
+    }
+  }
+
+  private async Task HandlePageSizeChanged(ChangeEventArgs e) {
+    if (string.IsNullOrWhiteSpace(e.Value?.ToString()) || !int.TryParse(e.Value.ToString(), out var pageSize)) { return; }
+    if (OnPageSizeChanged.HasDelegate) {
+      await OnPageSizeChanged.InvokeAsync(pageSize);
+    }
+  }
+}

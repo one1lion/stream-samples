@@ -1,0 +1,61 @@
+﻿@page "/counter"
+@using CsvHelper
+@using CsvHelper.Configuration
+@using CsvHelper.Excel
+@using EfCorePaging.Shared.FloatTableModels
+@using System.Globalization
+@using System.Text.Json
+
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<p role="status">Current count: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+
+<InputFile OnChange=OnInputFileChange />
+
+@code {
+  private int currentCount = 0;
+
+  private void IncrementCount() {
+    currentCount++;
+  }
+
+  public async Task OnInputFileChange(InputFileChangeEventArgs e) {
+    List<FloatTableViewModel> floatTableViewModels = new List<FloatTableViewModel>();
+    var curFile = e.File;
+    CsvReader? csvReader = default;
+    StreamReader? sRead = default;
+    ExcelParser? xlParser = default;
+    MemoryStream? memStream = default;
+
+    if (curFile.Name.Trim().ToUpper().Split('.').Last().StartsWith("XLS")) {
+      memStream = new MemoryStream();
+      await curFile.OpenReadStream().CopyToAsync(memStream);
+      xlParser = new ExcelParser(memStream, CultureInfo.InvariantCulture);
+      csvReader = new CsvReader(xlParser);
+    } else {
+      sRead = new StreamReader(curFile.OpenReadStream());
+      csvReader = new CsvReader(sRead, new CsvConfiguration(CultureInfo.InvariantCulture) {
+        HasHeaderRecord = false
+      });
+    }
+
+    csvReader.Context.RegisterClassMap<FloatTableViewModelMap>();
+    var parsedData = csvReader.GetRecordsAsync<FloatTableViewModel>();
+
+    await foreach (var curData in parsedData)//this is where xlsx fails
+    {
+      floatTableViewModels.Add(curData);
+    }
+
+    csvReader?.Dispose();
+    sRead?.Close();
+    sRead?.Dispose();
+    xlParser?.Dispose();
+    memStream?.Close();
+    Console.WriteLine(JsonSerializer.Serialize(floatTableViewModels));
+  }
+}
