@@ -5,73 +5,113 @@
 @using SomeTaco.Models
 @using SomeTaco.Models.Lookups
 
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorageService
+
 <h3>TacoMe</h3>
 
 <Pager PagerInfo=_toppingResponse.PagerInfo
-       OnPageChanged=HandlePageChanged 
+       OnPageChanged=HandlePageChanged
        OnPageSizeChanged=HandlePageSizeChanged />
 
-@if (_loading || ToppingList is null) {
-  <div class="spinner">Loading...</div>
-} else if (!ToppingList.Any()) {
-  <p>No Toppings found</p>
-} else {
-  <ol>
-    @foreach (var topping in ToppingList) {
-      <li>@topping.Name</li>
-    }
-  </ol>
+@if (_loading || ToppingList is null)
+{
+    <div class="spinner">Loading...</div>
+}
+else if (!ToppingList.Any())
+{
+    <p>No Toppings found</p>
+}
+else
+{
+    <ol>
+        @foreach (var topping in ToppingList)
+        {
+            <li>@topping.Name</li>
+        }
+    </ol>
 }
 
 @code {
-  [Inject] private ITacoService TacoService { get; set; } = default!;
+    [Inject] private ITacoService TacoService { get; set; } = default!;
 
-  private ToppingType _selectedTopping;
+    private ToppingType _selectedTopping;
 
-  private ToppingInfo _toppingResponse = new();
-  private List<Topping>? ToppingList => _toppingResponse.CurrentToppingsList;
+    private ToppingInfo _toppingResponse = new();
+    private List<Topping>? ToppingList => _toppingResponse.CurrentToppingsList;
 
-  private bool _loading;
+    private bool _loading;
 
-  protected override async Task OnInitializedAsync() {
-    await GetToppingsList();
-  }
-
-  private async Task HandlePageChanged(int newPage) {
-    switch (newPage) {
-      case (int)PageDirection.First:
-        _toppingResponse.PagerInfo.PageNum = 1;
-        break;
-
-      case (int)PageDirection.Previous:
-        _toppingResponse.PagerInfo.PageNum--;
-        break;
-
-      case (int)PageDirection.Next:
-        _toppingResponse.PagerInfo.PageNum++;
-        break;
-
-      case (int)PageDirection.Last:
-        _toppingResponse.PagerInfo.PageNum = _toppingResponse.PagerInfo.TotalPageCount;
-        break;
-
-      default:
-        _toppingResponse.PagerInfo.PageNum = newPage;
-        break;
+    protected override async Task OnInitializedAsync()
+    {
+        await GetToppingsList();
+        await InvokeAsync(StateHasChanged);
     }
 
-    await GetToppingsList();
-  }
+    private bool _dataNotGot = true;
 
-  private async Task HandlePageSizeChanged(int newPageSize) {
-    _toppingResponse.PagerInfo.PageSize = newPageSize;
-    await GetToppingsList();
-  }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_dataNotGot && _toppingResponse.PagerInfo.TotalRecordCount > 10)
+        {
+            _dataNotGot = false;
+            var totPage = (int)Math.Ceiling((double)_toppingResponse.PagerInfo.TotalRecordCount / 10);
+            var toppingTasks = new List<Task<ToppingInfo>>();
+            toppingTasks.AddRange(
+                Enumerable.Range(1, totPage).Select(curPage =>
+                {
+                    var pagerInfo = _toppingResponse.PagerInfo with { PageNum = curPage, PageSize = 10 };
+                    return TacoService.GetToppings(pagerInfo);
+                })
+            );
+            var toppingList = new List<Topping>();
+            await Task.WhenAll(toppingTasks);
+            foreach(var task in toppingTasks)
+            {
+                toppingList.AddRange(task.Result.CurrentToppingsList ?? new());
+            }
+            await LocalStorageService.SetItemAsync("ToppingListCache", toppingList);
+        }
+    }
 
-  private async Task GetToppingsList() {
-    _loading = true;
-    await InvokeAsync(StateHasChanged);
-    _toppingResponse = await TacoService.GetToppings(_toppingResponse.PagerInfo);
-    _loading = false;
-  }
+    private async Task HandlePageChanged(int newPage)
+    {
+        switch (newPage)
+        {
+            case (int)PageDirection.First:
+                _toppingResponse.PagerInfo.PageNum = 1;
+                break;
+
+            case (int)PageDirection.Previous:
+                _toppingResponse.PagerInfo.PageNum--;
+                break;
+
+            case (int)PageDirection.Next:
+                _toppingResponse.PagerInfo.PageNum++;
+                break;
+
+            case (int)PageDirection.Last:
+                _toppingResponse.PagerInfo.PageNum = _toppingResponse.PagerInfo.TotalPageCount;
+                break;
+
+            default:
+                _toppingResponse.PagerInfo.PageNum = newPage;
+                break;
+        }
+
+        await GetToppingsList();
+    }
+
+    private async Task HandlePageSizeChanged(int newPageSize)
+    {
+        _toppingResponse.PagerInfo.PageSize = newPageSize;
+        await GetToppingsList();
+    }
+
+    private async Task GetToppingsList()
+    {
+        _loading = true;
+        await InvokeAsync(StateHasChanged);
+        _toppingResponse = await TacoService.GetToppings(_toppingResponse.PagerInfo);
+        _loading = false;
+    }
 }

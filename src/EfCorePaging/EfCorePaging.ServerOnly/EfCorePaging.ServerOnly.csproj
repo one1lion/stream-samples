@@ -1,15 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UserSecretsId>3cb98dc7-0802-4e42-95ac-aedaa306e725</UserSecretsId>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\EfCorePaging.Pages\EfCorePaging.Pages.csproj" />
-    <ProjectReference Include="..\EfCorePaging.SharedServer\EfCorePaging.SharedServer.csproj" />
-    <ProjectReference Include="..\EfCorePaging.Shared\EfCorePaging.Shared.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\EfCorePaging.Pages\EfCorePaging.Pages.csproj" />
+        <ProjectReference Include="..\EfCorePaging.SharedServer\EfCorePaging.SharedServer.csproj" />
+        <ProjectReference Include="..\EfCorePaging.Shared\EfCorePaging.Shared.csproj" />
+    </ItemGroup>
 
 </Project>
